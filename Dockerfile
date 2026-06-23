@@ -9,7 +9,7 @@ FROM node:22-bookworm-slim
 ARG CLAUDE_CODE_VERSION=latest
 ARG OPENCODE_VERSION=latest
 ARG OMO_VERSION=latest
-ARG DEEPSEEK_BASE_URL=https://api.deepseek.com
+ARG DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic
 
 # Base tooling the agents expect: git, ripgrep (code search), curl/ca-certs, less, procps.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -56,13 +56,13 @@ WORKDIR /workspace
 # project while project configs stay isolated.
 #   --no-tui          : run the installer non-interactively (no subscription interview)
 #   --platform=opencode : Ultimate edition (OpenCode), not the Codex Light edition
-#   --claude=yes      : declare which providers you have so omo can map agents -> models;
-#                       adjust to match what your keys/gateway expose (e.g. add --openai=yes).
+#   --claude=no ...     : we don't use any of omo's built-in providers — every agent gets
+#                         rewritten to deepseek by configure-deepseek.mjs below, so these
+#                         yes/no values don't affect the final config.
 # The omo plugin's own deps are fetched by OpenCode on first run (one-time network per project,
 # cached under that project's .agent/cache). For an air-gapped build, point npm/bun at an
 # internal mirror and pre-warm that cache.
-# NOTE: in --no-tui mode omo wants ALL provider flags stated explicitly. We override everything
-# to deepseek afterwards, so the yes/no values here don't affect the final config.
+# NOTE: in --no-tui mode omo wants ALL provider flags stated explicitly.
 ARG OMO_INSTALL_FLAGS="--no-tui --platform=opencode --claude=no --openai=no --gemini=no --copilot=no"
 RUN oh-my-openagent install ${OMO_INSTALL_FLAGS}
 

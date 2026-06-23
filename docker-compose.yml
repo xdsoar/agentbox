@@ -19,12 +19,15 @@ services:
       # ---- OpenCode + omo use DeepSeek (set DEEPSEEK_API_KEY in .env) ----
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
 
-      # ---- Claude Code provider: a direct key OR a gateway (set these in .env) ----
-      #ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # ---- Claude Code: Pro/Max SUBSCRIPTION via OAuth token (set in .env) ----
+      # Generate once with `claude setup-token`; bills to your subscription, not the API.
+      # Do NOT also set ANTHROPIC_API_KEY — an API key would override the subscription.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
-      #ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
-      #ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
-      #ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      # If you instead use an API key or a gateway, comment the line above and uncomment these:
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      # ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+      # ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
 
       # ---- no surprise self-upgrades in the box; you own versions via build args ----
       DISABLE_AUTOUPDATER: "1"

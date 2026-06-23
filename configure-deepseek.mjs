@@ -27,15 +27,21 @@ const oc = existsSync(ocPath) ? parseLoose(readFileSync(ocPath, 'utf8')) : {};
 oc['$schema'] = oc['$schema'] || 'https://opencode.ai/config.json';
 oc.provider = oc.provider || {};
 oc.provider.deepseek = {
-  npm: '@ai-sdk/openai-compatible',
+  // Use DeepSeek's ANTHROPIC-compatible endpoint: @ai-sdk/anthropic natively parses
+  // reasoning/thinking streams, whereas @ai-sdk/openai-compatible drops DeepSeek's private
+  // `reasoning_content` field and hangs on reasoning models.
+  npm: '@ai-sdk/anthropic',
   name: 'DeepSeek',
   options: {
     // Override at build with --build-arg DEEPSEEK_BASE_URL=... to point at a gateway.
-    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/anthropic',
     apiKey: '{env:DEEPSEEK_API_KEY}',
   },
   models: {
-    'deepseek-v4-pro': { name: 'DeepSeek V4 Pro' },
+    'deepseek-v4-pro': {
+      name: 'DeepSeek V4 Pro',
+      options: { thinking: { type: 'enabled', budgetTokens: 8192 } },
+    },
   },
 };
 oc.model = MODEL;
