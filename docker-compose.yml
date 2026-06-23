@@ -1,0 +1,75 @@
+name: agent-box
+
+services:
+  agent:
+    build:
+      context: .
+      args:
+        CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-latest}
+        OPENCODE_VERSION: ${OPENCODE_VERSION:-latest}
+    image: agent-box:local
+
+    init: true            # reap zombies / forward signals cleanly for the TUI
+    stdin_open: true      # docker -i
+    tty: true             # docker -t
+    working_dir: /workspace
+    user: "1000:1000"     # the image's built-in non-root 'node' user
+
+    environment:
+      # ---- OpenCode + omo use DeepSeek (set DEEPSEEK_API_KEY in .env) ----
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+
+      # ---- Claude Code provider: a direct key OR a gateway (set these in .env) ----
+      #ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      #ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      #ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
+      #ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+
+      # ---- no surprise self-upgrades in the box; you own versions via build args ----
+      DISABLE_AUTOUPDATER: "1"
+      DISABLE_TELEMETRY: "1"
+
+      # ---- per-project ISOLATED state, redirected into ./.agent (gitignore it!) ----
+      # This is the whole point: each project gets its own dotfiles, so no cross-project
+      # memory bleed, and your host ~/.claude / ~/.config are never touched.
+      CLAUDE_CONFIG_DIR: /workspace/.agent/claude
+      XDG_CONFIG_HOME: /workspace/.agent/config
+      XDG_DATA_HOME: /workspace/.agent/data
+      XDG_STATE_HOME: /workspace/.agent/state
+      XDG_CACHE_HOME: /workspace/.agent/cache
+
+    volumes:
+      # The project — the ONLY thing the agent can read/write by default.
+      # PROJECT_DIR is injected by the `agentbox` shell wrapper (defaults to current dir).
+      - ${PROJECT_DIR:-.}:/workspace
+
+      # OPTIONAL: reuse your git identity, read-only. Uncomment if you have ~/.gitconfig.
+      # - ${HOME}/.gitconfig:/home/node/.gitconfig:ro
+
+      # OPTIONAL (perf): shared package caches as named volumes so installs aren't
+      # repeated per project and don't go over the slow bind mount.
+      # Drop these for UNTRUSTED projects (a poisoned cache shouldn't be shared).
+      # - npm-cache:/home/node/.npm
+      # - pip-cache:/home/node/.cache/pip
+
+    # ---- blast-radius limits: the container is the boundary, so cap what it can do ----
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 1024
+    mem_limit: 6g
+    cpus: 4
+    tmpfs:
+      - /tmp
+
+    # OPTIONAL: publish a port if you use `opencode serve` / `opencode web`.
+    # ports:
+    #   - "127.0.0.1:4096:4096"
+
+    command: ["bash"]
+
+# volumes:
+#   npm-cache:
+#   pip-cache:
