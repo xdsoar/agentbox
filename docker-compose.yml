@@ -65,7 +65,7 @@ services:
     mem_limit: 6g
     cpus: 4
     tmpfs:
-      - /tmp
+      - /tmp:exec
 
     # OPTIONAL: publish a port if you use `opencode serve` / `opencode web`.
     # ports:
