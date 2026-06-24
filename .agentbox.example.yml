@@ -1,0 +1,18 @@
+# agentbox per-project overrides — standard compose merge file.
+# Copy to .agentbox.yml in your project root and edit.
+# It merges on top of agentbox's docker-compose.yml at runtime.
+#
+# All docker compose service keys are supported:
+#   volumes, environment, security_opt, ports, tmpfs, etc.
+# Add only what differs from the main compose — everything else is inherited.
+
+services:
+  agent:
+    volumes:
+      # Mount extra host paths into the container.
+      # Format: - /absolute/host/path:<container-path>[:ro]
+      #
+      # Examples (uncomment and edit):
+      #   - ~/libs/company-utils:/libs/company-utils:ro
+      #   - ~/data/datasets:/data:ro
+      #   - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock:ro

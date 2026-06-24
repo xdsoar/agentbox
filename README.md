@@ -39,9 +39,12 @@ agentbox claude setup-token     # 打印一个授权 URL + 一年期 token sk-an
 ```bash
 agentbox() {
   local AGENTBOX_DIR="$HOME/Documents/project/agentbox"
+  local COMPOSE_FILES=(-f "$AGENTBOX_DIR/docker-compose.yml")
+  # Merge per-project overrides (.agentbox.yml) if present.
+  [ -f "$PWD/.agentbox.yml" ] && COMPOSE_FILES+=(-f "$PWD/.agentbox.yml")
   PROJECT_DIR="$PWD" \
   PROJECT_NAME="$(basename "$PWD")" \
-  docker compose -f "$AGENTBOX_DIR/docker-compose.yml" --env-file "$AGENTBOX_DIR/.env" \
+  docker compose "${COMPOSE_FILES[@]}" --env-file "$AGENTBOX_DIR/.env" \
     run --rm agent "$@"
 }
 ```
@@ -77,6 +80,33 @@ agentbox opencode
 
 容器内出口不做白名单——如需限制 agent 能访问哪些外部地址,在 iKuai / OpenWrt 上对该容器
 (或整个 OrbStack VM)的流量做策略即可,粒度和审计都比塞个代理进容器更好控。
+
+### 挂载额外路径
+
+默认只把项目目录本身挂进容器。如果 agent 需要访问项目外的路径(共享库、数据目录、SSH socket 等),
+在项目根目录放一个 `.agentbox.yml`:
+
+```bash
+cd ~/code/some-project
+cp ~/Documents/project/agentbox/.agentbox.example.yml .agentbox.yml
+# 编辑 .agentbox.yml,按需取消注释并改路径
+```
+
+`.agentbox.yml` 是标准 compose override — 框架自动检测并合并,**仅需声明你比主 compose 多出的那部分**:
+
+```yaml
+# .agentbox.yml
+services:
+  agent:
+    volumes:
+      - ~/libs/company-utils:/libs/company-utils:ro
+      - ~/data/datasets:/data:ro
+      # SSH agent socket — 让容器内 git push/pull 复用宿主机密钥
+      - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
+```
+
+也支持 `environment` 等任意 compose 字段,灵活性不做限制。`.agentbox.yml` 可 `.gitignore` 或进 repo
+(团队共享挂载策略)。
 
 ## omo / OpenCode 配置(已钉死 DeepSeek V4 Pro)
 
