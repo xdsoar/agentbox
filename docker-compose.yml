@@ -12,7 +12,7 @@ services:
     init: true            # reap zombies / forward signals cleanly for the TUI
     stdin_open: true      # docker -i
     tty: true             # docker -t
-    working_dir: /workspace
+    working_dir: /${PROJECT_NAME:-workspace}
     user: "1000:1000"     # the image's built-in non-root 'node' user
 
     environment:
@@ -36,16 +36,16 @@ services:
       # ---- per-project ISOLATED state, redirected into ./.agent (gitignore it!) ----
       # This is the whole point: each project gets its own dotfiles, so no cross-project
       # memory bleed, and your host ~/.claude / ~/.config are never touched.
-      CLAUDE_CONFIG_DIR: /workspace/.agent/claude
-      XDG_CONFIG_HOME: /workspace/.agent/config
-      XDG_DATA_HOME: /workspace/.agent/data
-      XDG_STATE_HOME: /workspace/.agent/state
-      XDG_CACHE_HOME: /workspace/.agent/cache
+      CLAUDE_CONFIG_DIR: /${PROJECT_NAME:-workspace}/.agent/claude
+      XDG_CONFIG_HOME: /${PROJECT_NAME:-workspace}/.agent/config
+      XDG_DATA_HOME: /${PROJECT_NAME:-workspace}/.agent/data
+      XDG_STATE_HOME: /${PROJECT_NAME:-workspace}/.agent/state
+      XDG_CACHE_HOME: /${PROJECT_NAME:-workspace}/.agent/cache
 
     volumes:
       # The project — the ONLY thing the agent can read/write by default.
       # PROJECT_DIR is injected by the `agentbox` shell wrapper (defaults to current dir).
-      - ${PROJECT_DIR:-.}:/workspace
+      - ${PROJECT_DIR:-.}:/${PROJECT_NAME:-workspace}
 
       # OPTIONAL: reuse your git identity, read-only. Uncomment if you have ~/.gitconfig.
       # - ${HOME}/.gitconfig:/home/node/.gitconfig:ro

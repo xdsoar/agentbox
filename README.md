@@ -40,6 +40,7 @@ agentbox claude setup-token     # 打印一个授权 URL + 一年期 token sk-an
 agentbox() {
   local AGENTBOX_DIR="$HOME/Documents/project/agentbox"
   PROJECT_DIR="$PWD" \
+  PROJECT_NAME="$(basename "$PWD")" \
   docker compose -f "$AGENTBOX_DIR/docker-compose.yml" --env-file "$AGENTBOX_DIR/.env" \
     run --rm agent "$@"
 }
@@ -50,7 +51,7 @@ agentbox() {
 ```bash
 cd ~/code/some-project
 
-agentbox                # 进容器 shell,/workspace 即当前项目
+agentbox                # 进容器 shell,当前项目即容器内 /<项目名>
 # 然后在容器里:
 claude-yolo             # = claude --dangerously-skip-permissions
 opencode                # OpenCode TUI(默认即全权限)

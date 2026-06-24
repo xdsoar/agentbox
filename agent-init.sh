@@ -5,11 +5,11 @@ set -euo pipefail
 # Everything the agents persist — memory, config, history, caches — lands under ./.agent,
 # so two projects never share state. Wipe a project's agent memory with: rm -rf .agent
 for d in \
-    "${CLAUDE_CONFIG_DIR:-/workspace/.agent/claude}" \
-    "${XDG_CONFIG_HOME:-/workspace/.agent/config}" \
-    "${XDG_DATA_HOME:-/workspace/.agent/data}" \
-    "${XDG_STATE_HOME:-/workspace/.agent/state}" \
-    "${XDG_CACHE_HOME:-/workspace/.agent/cache}"; do
+    "${CLAUDE_CONFIG_DIR:-/${PROJECT_NAME:-workspace}/.agent/claude}" \
+    "${XDG_CONFIG_HOME:-/${PROJECT_NAME:-workspace}/.agent/config}" \
+    "${XDG_DATA_HOME:-/${PROJECT_NAME:-workspace}/.agent/data}" \
+    "${XDG_STATE_HOME:-/${PROJECT_NAME:-workspace}/.agent/state}" \
+    "${XDG_CACHE_HOME:-/${PROJECT_NAME:-workspace}/.agent/cache}"; do
     mkdir -p "$d"
 done
 
@@ -18,7 +18,7 @@ done
 # Each project gets its own editable copy, so omo is ready everywhere without re-installing,
 # while project configs stay isolated. Delete ./.agent to reset to the shipped template.
 OPENCODE_TEMPLATE="/home/node/.config/opencode"
-OPENCODE_PROJECT="${XDG_CONFIG_HOME:-/workspace/.agent/config}/opencode"
+OPENCODE_PROJECT="${XDG_CONFIG_HOME:-/${PROJECT_NAME:-workspace}/.agent/config}/opencode"
 if [ -d "$OPENCODE_TEMPLATE" ] && [ ! -e "$OPENCODE_PROJECT" ]; then
     mkdir -p "$(dirname "$OPENCODE_PROJECT")"
     cp -a "$OPENCODE_TEMPLATE" "$OPENCODE_PROJECT"
