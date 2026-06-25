@@ -24,4 +24,12 @@ if [ -d "$OPENCODE_TEMPLATE" ] && [ ! -e "$OPENCODE_PROJECT" ]; then
     cp -a "$OPENCODE_TEMPLATE" "$OPENCODE_PROJECT"
 fi
 
+# Run postCreate hook if injected by agentbox CLI on container creation.
+# The script is mounted at /.agentbox/post-create.sh and is only present
+# on the FIRST start after container creation (agentbox removes it after execution).
+if [ -f "/.agentbox/post-create.sh" ]; then
+    echo "[agentbox] Running postCreate command..."
+    bash "/.agentbox/post-create.sh" || echo "[agentbox] WARNING: postCreate command failed" >&2
+fi
+
 exec "$@"

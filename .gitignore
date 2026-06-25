@@ -1,3 +1,4 @@
 .env
 .agent/**
 .omo/**
+.agentbox.yml

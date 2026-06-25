@@ -50,11 +50,10 @@ services:
       # OPTIONAL: reuse your git identity, read-only. Uncomment if you have ~/.gitconfig.
       # - ${HOME}/.gitconfig:/home/node/.gitconfig:ro
 
-      # OPTIONAL (perf): shared package caches as named volumes so installs aren't
-      # repeated per project and don't go over the slow bind mount.
-      # Drop these for UNTRUSTED projects (a poisoned cache shouldn't be shared).
-      # - npm-cache:/home/node/.npm
-      # - pip-cache:/home/node/.cache/pip
+      # Shared package caches — speed up repeated installs across sessions.
+      # For UNTRUSTED projects, comment these out (poisoned cache risk).
+      - npm-cache:/home/node/.npm
+      - pip-cache:/home/node/.cache/pip
 
     # ---- blast-radius limits: the container is the boundary, so cap what it can do ----
     security_opt:
@@ -71,8 +70,10 @@ services:
     # ports:
     #   - "127.0.0.1:4096:4096"
 
-    command: ["bash"]
+    # Keep the container alive in background so `agentbox exec` can attach.
+    # The entrypoint (agent-init.sh) still runs on container start, then sleeps.
+    command: ["sleep", "infinity"]
 
-# volumes:
-#   npm-cache:
-#   pip-cache:
+volumes:
+  npm-cache:
+  pip-cache:

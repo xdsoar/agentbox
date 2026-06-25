@@ -1,0 +1,61 @@
+// devcontainer.example.json — template for .agent/devcontainer.json
+//
+// Copy to your project:
+//   cp devcontainer.example.json <project>/.agent/devcontainer.json
+//
+// agentbox uses a subset of the .devcontainer specification.
+// It does NOT include IDE-specific fields (customizations, extensions, forwardPorts).
+// Focus: declaring what the AI agent needs inside its sandbox.
+
+{
+  // ── Option A: Extend the agentbox base image with a custom Dockerfile ──
+  // Useful when the agent needs a language runtime or system dependencies
+  // that aren't in the base agentbox image (JDK, Rust, Go, etc.).
+  // Place your Dockerfile.dev in the project root.
+  "build": {
+    "dockerfile": "./Dockerfile.dev"
+  },
+
+  // ── Option B: Use a pre-built image directly (skip agentbox base) ──
+  // Comment out "build" above and uncomment below:
+  // "image": "python:3.12-bookworm",
+
+  // ── Community-maintained tool installers ──
+  // Executed ONCE when the container is first created.
+  // Not re-executed on container reuse (start/stop).
+  // See: https://containers.dev/features
+  "features": {
+    // Java 21 + Maven + Gradle toolchain
+    // "ghcr.io/devcontainers/features/java:1": { "version": "21" },
+
+    // Python 3.12 with pip
+    // "ghcr.io/devcontainers/features/python:1": { "version": "3.12" },
+
+    // Node.js 22
+    // "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+
+    // Docker CLI (for building images inside the container)
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // ── Persistent cache volumes ──
+  // Survive container rebuilds. Shared across sessions of the same project.
+  "mounts": [
+    // Maven local repository cache (~/.m2)
+    // "source=maven-repo,target=/home/node/.m2/repository,type=volume",
+
+    // Gradle caches
+    // "source=gradle-caches,target=/home/node/.gradle/caches,type=volume"
+  ],
+
+  // ── First-time setup command ──
+  // Runs ONCE after container creation (e.g., warm up caches).
+  "postCreateCommand": "echo 'Container ready'",
+
+  // ── Environment variables ──
+  // Set inside the container for all sessions.
+  "containerEnv": {
+    // "JAVA_HOME": "/usr/lib/jvm/msopenjdk-21",
+    // "PYTHONUNBUFFERED": "1"
+  }
+}
