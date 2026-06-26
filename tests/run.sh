@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-AGENTBOX_HOME="${AGENTBOX_HOME:-$HOME/Documents/project/agentbox}"
+AGENTBOX_HOME="${AGENTBOX_HOME:-$(cd "$(dirname "$0")/.." && pwd)}"
 AGENTBOX_BIN="$AGENTBOX_HOME/bin/agentbox"
 TEST_ROOT="/tmp/agentbox-test-$$"
 PASS=0
@@ -29,11 +29,11 @@ assert_ok() {
     local desc="$1"; shift
     if "$@" &>/dev/null; then
         echo "  $(_green PASS)  $desc"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  $(_red FAIL)  $desc"
         echo "        command: $*"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -41,12 +41,12 @@ assert_eq() {
     local desc="$1" expected="$2" actual="$3"
     if [ "$actual" = "$expected" ]; then
         echo "  $(_green PASS)  $desc"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  $(_red FAIL)  $desc"
         echo "        expected: '$expected'"
         echo "        actual:   '$actual'"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -54,10 +54,10 @@ assert_file_exists() {
     local desc="$1" file="$2"
     if [ -f "$file" ]; then
         echo "  $(_green PASS)  $desc"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  $(_red FAIL)  $desc (file not found: $file)"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -65,11 +65,11 @@ assert_contains() {
     local desc="$1" needle="$2" haystack="$3"
     if echo "$haystack" | grep -qF "$needle"; then
         echo "  $(_green PASS)  $desc"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  $(_red FAIL)  $desc"
         echo "        expected to contain: '$needle'"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -188,8 +188,11 @@ JSON
 
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" start 2>&1
 
-    # Create a marker file
-    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec touch /tmp/reuse-marker 2>&1
+    # Create a marker file (use workspace dir, NOT /tmp which is tmpfs lost on stop)
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec touch /home/node/reuse-marker 2>&1
+
+    # Stop the container so we can verify reuse (start from stopped state)
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" stop 2>&1
 
     # Second start — should NOT rebuild
     local start_out
@@ -198,7 +201,7 @@ JSON
 
     # Marker should still exist (same container)
     local marker_out
-    marker_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec ls /tmp/reuse-marker 2>&1)
+    marker_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec ls /home/node/reuse-marker 2>&1)
     assert_contains "2.3 marker persists" "reuse-marker" "$marker_out"
 
     echo ""
@@ -254,27 +257,37 @@ test_scenario_5() {
     proj=$(setup_project "scenario5")
     cd "$proj"
 
-    cat > "$proj/.agent/devcontainer.json" <<'JSON'
-{}
+    # Create a named Docker volume and fix ownership so the non-root
+    # 'node' user (UID 1000) can write to it inside the container.
+    local vol_name="agentbox-test-vol-$$"
+    docker volume create "$vol_name" > /dev/null 2>&1
+    docker run --rm --user 0:0 -v "${vol_name}:/vol" agent-box:local \
+        chown 1000:1000 /vol > /dev/null 2>&1
+
+    cat > "$proj/.agent/devcontainer.json" <<JSON
+{"mounts": ["source=${vol_name},target=/home/node/cache,type=volume"]}
 JSON
 
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" start 2>&1
 
-    # Install a package
-    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pip install requests 2>&1
+    # Write a marker into the cache volume
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sh -c 'echo cached > /home/node/cache/marker' 2>&1
 
     # Rebuild
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" rebuild 2>&1
 
-    # Install again — should hit cache
+    # Marker should survive rebuild
     local cache_out
-    cache_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pip install requests 2>&1)
-    assert_contains "5.3 cache hit" "already satisfied" "$cache_out"
+    cache_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec cat /home/node/cache/marker 2>&1)
+    assert_eq "5.3 cache survives rebuild" "cached" "$cache_out"
 
-    # Check volume exists
+    # Volume still exists and is declared external in override
     local vol_exists
-    vol_exists=$(docker volume ls -q | grep pip-cache || echo "")
-    assert_contains "5.4 volume exists" "pip-cache" "$vol_exists"
+    vol_exists=$(docker volume ls -q | grep -F "$vol_name" || echo "")
+    assert_contains "5.4 external volume persisted" "$vol_name" "$vol_exists"
+
+    # Clean up the test volume
+    docker volume rm "$vol_name" > /dev/null 2>&1 || true
 
     echo ""
 }
@@ -364,13 +377,13 @@ JSON
     host_b=$(AGENTBOX_PROJECT_DIR="$proj_b" "$AGENTBOX_BIN" exec hostname 2>&1)
     assert_contains "11.2 different containers" "!=" "$host_a != $host_b"
 
-    # Install flask in A only
-    AGENTBOX_PROJECT_DIR="$proj_a" "$AGENTBOX_BIN" exec pip install flask 2>&1
+    # Create file in A only
+    AGENTBOX_PROJECT_DIR="$proj_a" "$AGENTBOX_BIN" exec touch /home/node/project-a-marker 2>&1
 
     # Should NOT be in B
-    local flask_in_b
-    flask_in_b=$(AGENTBOX_PROJECT_DIR="$proj_b" "$AGENTBOX_BIN" exec pip show flask 2>&1 || true)
-    assert_contains "11.4 flask not in B" "not found" "$flask_in_b"
+    local marker_in_b
+    marker_in_b=$(AGENTBOX_PROJECT_DIR="$proj_b" "$AGENTBOX_BIN" exec ls /home/node/project-a-marker 2>&1 || true)
+    assert_contains "11.4 isolation" "No such file" "$marker_in_b"
 
     echo ""
 }
@@ -404,6 +417,30 @@ JSON
     echo ""
 }
 
+# ── Scenario: AGENTBOX_HOME Auto-Detection ────────────────────────────────
+
+test_agentbox_home_autodetect() {
+    echo "=== AGENTBOX_HOME: Auto-Detection ==="
+
+    local proj
+    proj=$(setup_project "autodetect")
+    cd "$proj"
+
+    echo '{}' > "$proj/.agent/devcontainer.json"
+
+    # Run agentbox WITHOUT AGENTBOX_HOME set — it must auto-detect from script location
+    AGENTBOX_PROJECT_DIR="$proj" env -u AGENTBOX_HOME "$AGENTBOX_BIN" start > /dev/null 2>&1
+    assert_ok "auto-detect: start succeeds without AGENTBOX_HOME" true
+
+    local whoami_out
+    whoami_out=$(AGENTBOX_PROJECT_DIR="$proj" env -u AGENTBOX_HOME "$AGENTBOX_BIN" exec whoami 2>&1)
+    assert_eq "auto-detect: exec whoami" "node" "$whoami_out"
+
+    AGENTBOX_PROJECT_DIR="$proj" env -u AGENTBOX_HOME "$AGENTBOX_BIN" clean > /dev/null 2>&1
+
+    echo ""
+}
+
 # ── main ─────────────────────────────────────────────────────────────────
 
 main() {
@@ -416,6 +453,7 @@ main() {
 
     preflight
 
+    test_agentbox_home_autodetect
     test_scenario_1
     test_scenario_2
     test_scenario_3

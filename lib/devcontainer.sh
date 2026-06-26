@@ -32,6 +32,21 @@ _project_name() {
     echo "agentbox-${hash}"
 }
 
+# Convert devcontainer mount format ("source=X,target=Y,type=volume") to
+# docker compose volume syntax ("X:Y" for volumes, "/X:Y" for binds).
+_convert_mount() {
+    local mount="$1"
+    local source target type
+    source=$(echo "$mount" | sed -n 's/.*source=\([^,]*\).*/\1/p')
+    target=$(echo "$mount" | sed -n 's/.*target=\([^,]*\).*/\1/p')
+    type=$(echo "$mount" | sed -n 's/.*type=\([^,]*\).*/\1/p')
+    if [ -z "$source" ] || [ -z "$target" ]; then
+        echo "$mount"
+        return
+    fi
+    echo "${source}:${target}"
+}
+
 # ── compose override generation ──────────────────────────────────────────
 
 _generate_override() {
@@ -82,19 +97,47 @@ _generate_override() {
         fi
 
         # --- volumes (mounts) ---
-        local mounts_count
+        local mounts_count has_postcreate
         mounts_count=$(jq -r '.mounts | length // 0' "$config" 2>/dev/null || echo 0)
+        has_postcreate=$(jq -r '.postCreateCommand // empty' "$config" 2>/dev/null || true)
+
         if [ "$mounts_count" -gt 0 ]; then
             echo "    volumes:"
             jq -r '.mounts[]' "$config" 2>/dev/null | while read -r mount; do
-                echo "      - ${mount}"
+                echo "      - $(_convert_mount "$mount")"
             done
         fi
 
-        # Always mount post-create script so entrypoint can pick it up
-        echo "      - ${PROJECT_DIR}/.agent/container/post-create.sh:/.agentbox/post-create.sh:ro"
+        # Mount post-create script so entrypoint can pick it up on first start.
+        if [ -n "$has_postcreate" ]; then
+            if [ "$mounts_count" -eq 0 ]; then
+                echo "    volumes:"
+            fi
+            echo "      - ${PROJECT_DIR}/.agent/container/post-create.sh:/.agentbox/post-create.sh:ro"
+        fi
 
     } > "$(_override_file)"
+
+    # Append top-level volumes: declaration for named volumes referenced in mounts.
+    # These are pre-created by volume_create_all() so we declare them external
+    # to avoid compose prefixing their names.
+    local volumes_block
+    volumes_block=$(jq -r '.mounts // [] | .[]' "$config" 2>/dev/null | while read -r mount; do
+        local type
+        type=$(echo "$mount" | sed -n 's/.*type=\([^,]*\).*/\1/p')
+        if [ "$type" = "volume" ]; then
+            local vol_name
+            vol_name=$(echo "$mount" | sed -n 's/.*source=\([^,]*\).*/\1/p')
+            [ -n "$vol_name" ] && echo "  ${vol_name}:"
+            [ -n "$vol_name" ] && echo "    external: true"
+        fi
+    done)
+    if [ -n "$volumes_block" ]; then
+        {
+            echo "volumes:"
+            echo "$volumes_block"
+        } >> "$(_override_file)"
+    fi
 }
 
 _write_minimal_override() {
@@ -104,10 +147,6 @@ _write_minimal_override() {
 services:
   agent:
 EOF
-    # Add post-create mount even in minimal mode
-    echo "    volumes:"
-    echo "      - ${PROJECT_DIR}/.agent/container/post-create.sh:/.agentbox/post-create.sh:ro" \
-        >> "$(_override_file)"
 }
 
 # ── public API ───────────────────────────────────────────────────────────

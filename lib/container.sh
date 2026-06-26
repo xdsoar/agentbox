@@ -103,10 +103,12 @@ _needs_rebuild() {
 # ── compose command helpers ──────────────────────────────────────────────
 
 _compose() {
-    docker compose -p "$COMPOSE_PROJECT" \
-        -f "$AGENTBOX_HOME/docker-compose.yml" \
-        ${COMPOSE_OVERRIDE_FILE:+-f "$COMPOSE_OVERRIDE_FILE"} \
-        "$@"
+    local compose_files=(-f "$AGENTBOX_HOME/docker-compose.yml")
+    # Per-project user-specified compose override (custom mounts, etc.)
+    [ -f "$PROJECT_DIR/.agentbox.yml" ] && compose_files+=(-f "$PROJECT_DIR/.agentbox.yml")
+    # Generated override from devcontainer.json
+    [ -n "${COMPOSE_OVERRIDE_FILE:-}" ] && compose_files+=(-f "$COMPOSE_OVERRIDE_FILE")
+    docker compose -p "$COMPOSE_PROJECT" "${compose_files[@]}" "$@"
 }
 
 _container_running() {
@@ -131,17 +133,19 @@ container_start() {
         # First time: build image + create container
         echo "[agentbox] First start — building image and creating container..."
         _compose build
+        _write_postcreate_file
         _compose up -d --wait
         _save_hashes
-        _run_postcreate
+        _exec_postcreate
     elif _needs_rebuild; then
         # Config changed: destroy old container, rebuild, recreate
         echo "[agentbox] Config changed — rebuilding container..."
         _compose down
         _compose build
+        _write_postcreate_file
         _compose up -d --wait
         _save_hashes
-        _run_postcreate
+        _exec_postcreate
     elif ! _container_running; then
         # Container exists but stopped, no config change — just start it
         echo "[agentbox] Starting existing container..."
@@ -151,6 +155,7 @@ container_start() {
 }
 
 container_stop() {
+    devcontainer_init
     if _container_running; then
         echo "[agentbox] Stopping container..."
         _compose stop
@@ -158,18 +163,21 @@ container_stop() {
 }
 
 container_rebuild() {
+    devcontainer_init
     echo "[agentbox] Forcing full rebuild..."
     if _container_exists; then
         _compose down
     fi
     _compose build --no-cache
+    _write_postcreate_file
     _compose up -d --wait
     _save_hashes
-    _run_postcreate
+    _exec_postcreate
     echo "[agentbox] Rebuild complete."
 }
 
 container_clean() {
+    devcontainer_init
     echo "[agentbox] Cleaning up..."
     if _container_exists; then
         _compose down
@@ -185,6 +193,7 @@ container_clean() {
 }
 
 container_status() {
+    devcontainer_init
     echo "Project:   $PROJECT_DIR"
     echo "Compose:   $COMPOSE_PROJECT"
 
@@ -207,7 +216,9 @@ container_status() {
 
 # ── postCreate hook ──────────────────────────────────────────────────────
 
-_run_postcreate() {
+# Write the post-create script BEFORE container creation so Docker bind-mounts
+# it as a file, not a directory. Must be called before _compose up -d.
+_write_postcreate_file() {
     local config="$PROJECT_DIR/.agent/devcontainer.json"
     if [ ! -f "$config" ]; then
         return 0
@@ -219,17 +230,30 @@ _run_postcreate() {
         return 0
     fi
 
-    echo "[agentbox] Running postCreateCommand..."
-    # Write a script and mount it so the container's entrypoint picks it up
     mkdir -p "$PROJECT_DIR/.agent/container"
+    # Remove any stale directory left by a previous failed run
+    rm -rf "$PROJECT_DIR/.agent/container/post-create.sh"
     echo "#!/usr/bin/env bash"  > "$PROJECT_DIR/.agent/container/post-create.sh"
     echo "set -euo pipefail"   >> "$PROJECT_DIR/.agent/container/post-create.sh"
     echo "$post_create"        >> "$PROJECT_DIR/.agent/container/post-create.sh"
     chmod +x "$PROJECT_DIR/.agent/container/post-create.sh"
+}
 
-    # Run it inside the container
-    _compose exec -T agent bash /.agentbox/post-create.sh 2>/dev/null || {
-        echo "[agentbox] WARNING: postCreateCommand failed (exit code: $?)" >&2
-    }
-    rm -f "$PROJECT_DIR/.agent/container/post-create.sh"
+# Clean up the post-create script after the container entrypoint has run it.
+# Must be called after _compose up -d --wait.
+_exec_postcreate() {
+    local config="$PROJECT_DIR/.agent/devcontainer.json"
+    if [ ! -f "$config" ]; then
+        return 0
+    fi
+
+    local post_create
+    post_create=$(jq -r '.postCreateCommand // empty' "$config" 2>/dev/null || true)
+    if [ -z "$post_create" ]; then
+        return 0
+    fi
+
+    if [ -f "$PROJECT_DIR/.agent/container/post-create.sh" ]; then
+        rm -f "$PROJECT_DIR/.agent/container/post-create.sh"
+    fi
 }

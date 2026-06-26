@@ -37,18 +37,18 @@ RUN printf '#!/usr/bin/env bash\nexec claude --dangerously-skip-permissions "$@"
     && chmod +x /usr/local/bin/claude-yolo
 
 # Entry hook that creates the per-project state dirs before launching anything.
-# --chmod=0755 so the non-root 'node' user can READ and EXECUTE it (a script needs both;
-# plain `chmod +x` would add execute without read and break shebang execution).
-COPY --chmod=0755 agent-init.sh /usr/local/bin/agent-init.sh
+COPY agent-init.sh /usr/local/bin/agent-init.sh
+RUN chmod 0755 /usr/local/bin/agent-init.sh
 
 # Build-time config: pin OpenCode + omo to deepseek-v4-pro only.
-# --chmod=0644 so the non-root 'node' user (which runs it below) can read it.
-COPY --chmod=0644 configure-deepseek.mjs /usr/local/lib/configure-deepseek.mjs
+COPY configure-deepseek.mjs /usr/local/lib/configure-deepseek.mjs
+RUN chmod 0644 /usr/local/lib/configure-deepseek.mjs
 
 # The node base image already ships a non-root 'node' user at uid/gid 1000.
 # Using it keeps bind-mounted file ownership sane on macOS Docker / OrbStack.
+RUN rmdir /workspace 2>/dev/null || true
 USER node
-WORKDIR /workspace
+WORKDIR /home/node
 
 # Pre-install omo (oh-my-openagent) into OpenCode. This writes a config TEMPLATE into the
 # image at /home/node/.config/opencode (omo plugin registration + agent->model map).

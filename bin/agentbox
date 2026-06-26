@@ -12,16 +12,19 @@
 #   agentbox clean        # remove container + volumes + state
 #   agentbox status       # show container state
 #
-# The AGENTBOX_HOME env var can override the installation directory.
-# Default: ~/Documents/project/agentbox
+# Set AGENTBOX_HOME to override the installation directory.
+# Default: parent directory of this script (i.e. the agentbox repo root).
 
 set -euo pipefail
 
-AGENTBOX_HOME="${AGENTBOX_HOME:-$HOME/Documents/project/agentbox}"
+# Resolve the agentbox installation root (one level above bin/).
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+AGENTBOX_HOME="${AGENTBOX_HOME:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 PROJECT_DIR="${AGENTBOX_PROJECT_DIR:-$PWD}"
+PROJECT_NAME="${AGENTBOX_PROJECT_NAME:-$(basename "$PROJECT_DIR")}"
+export PROJECT_DIR PROJECT_NAME
 
 # Source library modules (relative to this script)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LIB_DIR="$(cd "$SCRIPT_DIR/../lib" && pwd)"
 
 source "$LIB_DIR/volume.sh"
@@ -64,13 +67,9 @@ _run_with_session() {
     container_start
     session_register
 
-    # Clean up session on exit (normal or interrupted)
     trap '_session_cleanup' EXIT INT TERM
 
-    docker compose -p "$COMPOSE_PROJECT" \
-        -f "$AGENTBOX_HOME/docker-compose.yml" \
-        ${COMPOSE_OVERRIDE_FILE:+-f "$COMPOSE_OVERRIDE_FILE"} \
-        exec -it agent "${cmd[@]}"
+    _compose exec -it agent "${cmd[@]}"
 }
 
 _session_cleanup() {
@@ -102,13 +101,9 @@ main() {
             _run_with_session "$@"
             ;;
         exec)
-            # Convenience: exec without session tracking (for scripting)
             shift
             container_start
-            docker compose -p "$COMPOSE_PROJECT" \
-                -f "$AGENTBOX_HOME/docker-compose.yml" \
-                ${COMPOSE_OVERRIDE_FILE:+-f "$COMPOSE_OVERRIDE_FILE"} \
-                exec -T agent "$@"
+            _compose exec -T agent "$@"
             ;;
 
         # ── low-level (container management) ──
