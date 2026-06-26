@@ -42,10 +42,10 @@
   // Survive container rebuilds. Shared across sessions of the same project.
   "mounts": [
     // Maven local repository cache (~/.m2)
-    // "source=maven-repo,target=/home/node/.m2/repository,type=volume",
+    // "source=maven-repo,target=/home/developer/.m2/repository,type=volume",
 
     // Gradle caches
-    // "source=gradle-caches,target=/home/node/.gradle/caches,type=volume"
+    // "source=gradle-caches,target=/home/developer/.gradle/caches,type=volume"
   ],
 
   // ── First-time setup command ──

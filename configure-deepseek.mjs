@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const MODEL = 'deepseek/deepseek-v4-pro';
-const HOME = process.env.HOME || '/home/node';
+const HOME = process.env.HOME || '/home/developer';
 const cfgDir = join(HOME, '.config', 'opencode');
 
 // Tolerant parse: omo may emit JSONC (// or /* */ comments). Try strict JSON first.

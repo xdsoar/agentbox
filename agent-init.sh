@@ -14,10 +14,10 @@ for d in \
 done
 
 # Seed the pre-installed OpenCode + omo config into this project on first run.
-# The image ships a template at /home/node/.config/opencode (built by `oh-my-openagent install`).
+# The image ships a template at /home/developer/.config/opencode (built by `oh-my-openagent install`).
 # Each project gets its own editable copy, so omo is ready everywhere without re-installing,
 # while project configs stay isolated. Delete ./.agent to reset to the shipped template.
-OPENCODE_TEMPLATE="/home/node/.config/opencode"
+OPENCODE_TEMPLATE="/home/developer/.config/opencode"
 OPENCODE_PROJECT="${XDG_CONFIG_HOME:-/${PROJECT_NAME:-workspace}/.agent/config}/opencode"
 if [ -d "$OPENCODE_TEMPLATE" ] && [ ! -e "$OPENCODE_PROJECT" ]; then
     mkdir -p "$(dirname "$OPENCODE_PROJECT")"

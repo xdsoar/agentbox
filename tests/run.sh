@@ -158,7 +158,7 @@ JSON
     # Check user inside container
     local whoami_out
     whoami_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec whoami 2>&1)
-    assert_eq "1.5 user is node" "node" "$whoami_out"
+    assert_eq "1.5 user is developer" "developer" "$whoami_out"
 
     # Check working directory
     local pwd_out
@@ -189,7 +189,7 @@ JSON
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" start 2>&1
 
     # Create a marker file (use workspace dir, NOT /tmp which is tmpfs lost on stop)
-    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec touch /home/node/reuse-marker 2>&1
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec touch /home/developer/reuse-marker 2>&1
 
     # Stop the container so we can verify reuse (start from stopped state)
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" stop 2>&1
@@ -201,7 +201,7 @@ JSON
 
     # Marker should still exist (same container)
     local marker_out
-    marker_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec ls /home/node/reuse-marker 2>&1)
+    marker_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec ls /home/developer/reuse-marker 2>&1)
     assert_contains "2.3 marker persists" "reuse-marker" "$marker_out"
 
     echo ""
@@ -258,27 +258,27 @@ test_scenario_5() {
     cd "$proj"
 
     # Create a named Docker volume and fix ownership so the non-root
-    # 'node' user (UID 1000) can write to it inside the container.
+    # 'developer' user (UID 1000) can write to it inside the container.
     local vol_name="agentbox-test-vol-$$"
     docker volume create "$vol_name" > /dev/null 2>&1
     docker run --rm --user 0:0 -v "${vol_name}:/vol" agent-box:local \
         chown 1000:1000 /vol > /dev/null 2>&1
 
     cat > "$proj/.agent/devcontainer.json" <<JSON
-{"mounts": ["source=${vol_name},target=/home/node/cache,type=volume"]}
+{"mounts": ["source=${vol_name},target=/home/developer/cache,type=volume"]}
 JSON
 
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" start 2>&1
 
     # Write a marker into the cache volume
-    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sh -c 'echo cached > /home/node/cache/marker' 2>&1
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sh -c 'echo cached > /home/developer/cache/marker' 2>&1
 
     # Rebuild
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" rebuild 2>&1
 
     # Marker should survive rebuild
     local cache_out
-    cache_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec cat /home/node/cache/marker 2>&1)
+    cache_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec cat /home/developer/cache/marker 2>&1)
     assert_eq "5.3 cache survives rebuild" "cached" "$cache_out"
 
     # Volume still exists and is declared external in override
@@ -378,11 +378,11 @@ JSON
     assert_contains "11.2 different containers" "!=" "$host_a != $host_b"
 
     # Create file in A only
-    AGENTBOX_PROJECT_DIR="$proj_a" "$AGENTBOX_BIN" exec touch /home/node/project-a-marker 2>&1
+    AGENTBOX_PROJECT_DIR="$proj_a" "$AGENTBOX_BIN" exec touch /home/developer/project-a-marker 2>&1
 
     # Should NOT be in B
     local marker_in_b
-    marker_in_b=$(AGENTBOX_PROJECT_DIR="$proj_b" "$AGENTBOX_BIN" exec ls /home/node/project-a-marker 2>&1 || true)
+    marker_in_b=$(AGENTBOX_PROJECT_DIR="$proj_b" "$AGENTBOX_BIN" exec ls /home/developer/project-a-marker 2>&1 || true)
     assert_contains "11.4 isolation" "No such file" "$marker_in_b"
 
     echo ""
@@ -434,9 +434,78 @@ test_agentbox_home_autodetect() {
 
     local whoami_out
     whoami_out=$(AGENTBOX_PROJECT_DIR="$proj" env -u AGENTBOX_HOME "$AGENTBOX_BIN" exec whoami 2>&1)
-    assert_eq "auto-detect: exec whoami" "node" "$whoami_out"
+    assert_eq "auto-detect: exec whoami" "developer" "$whoami_out"
 
     AGENTBOX_PROJECT_DIR="$proj" env -u AGENTBOX_HOME "$AGENTBOX_BIN" clean > /dev/null 2>&1
+
+    echo ""
+}
+
+# ── Scenario 12: Built-in Runtime & Toolchain ────────────────────────────
+
+test_scenario_12() {
+    echo "=== Scenario 12: Built-in Runtime & Toolchain ==="
+
+    local proj
+    proj=$(setup_project "scenario12")
+    cd "$proj"
+
+    echo '{}' > "$proj/.agent/devcontainer.json"
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" start 2>&1
+
+    # ── Python ──
+    local py_ver
+    py_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec python3 --version 2>&1)
+    assert_contains "12.1 python3 available" "Python 3" "$py_ver"
+
+    local py_out
+    py_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec python3 -c "print('hello-python')" 2>&1)
+    assert_eq "12.2 python3 executes" "hello-python" "$py_out"
+
+    local pip_ver
+    pip_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pip3 --version 2>&1)
+    assert_contains "12.3 pip3 available" "pip" "$pip_ver"
+
+    # ── vim ──
+    local vim_ver
+    vim_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec vim --version 2>&1 | head -1)
+    assert_contains "12.4 vim available" "Vi IMproved" "$vim_ver"
+
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sh -c 'echo "before" > /tmp/vim-test.txt' 2>&1
+    AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec vim -c '%s/before/after/' -c 'wq' /tmp/vim-test.txt 2>&1
+    local vim_out
+    vim_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec cat /tmp/vim-test.txt 2>&1)
+    assert_eq "12.5 vim can edit" "after" "$(echo "$vim_out" | tr -d '\r\n')"
+
+    # ── Linux CLI tools ──
+    local grep_ver
+    grep_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec grep --version 2>&1 | head -1)
+    assert_contains "12.6 grep available" "GNU grep" "$grep_ver"
+
+    local sed_ver
+    sed_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sed --version 2>&1 | head -1)
+    assert_contains "12.7 sed available" "GNU sed" "$sed_ver"
+
+    local awk_ver
+    awk_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec awk --version 2>&1 | head -1)
+    assert_contains "12.8 awk available" "GNU Awk" "$awk_ver"
+
+    local find_ver
+    find_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec find --version 2>&1 | head -1)
+    assert_contains "12.9 find available" "GNU findutils" "$find_ver"
+
+    # ── LSP / Language Servers ──
+    local pyright_ver
+    pyright_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pyright --version 2>&1)
+    assert_contains "12.10 pyright available" "pyright" "$pyright_ver"
+
+    local tsls_ver
+    tsls_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec typescript-language-server --version 2>&1)
+    assert_ok "12.11 typescript-language-server available" test -n "$tsls_ver"
+
+    local pylsp_out
+    pylsp_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pip3 list 2>&1)
+    assert_contains "12.12 python-lsp-server installed" "python-lsp-server" "$pylsp_out"
 
     echo ""
 }
@@ -461,6 +530,7 @@ main() {
     test_scenario_7
     test_scenario_9
     test_scenario_11
+    test_scenario_12
     test_postcreate_idempotent
 
     echo ""

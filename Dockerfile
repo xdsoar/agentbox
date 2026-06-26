@@ -11,7 +11,8 @@ ARG OPENCODE_VERSION=latest
 ARG OMO_VERSION=latest
 ARG DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic
 
-# Base tooling the agents expect: git, ripgrep (code search), curl/ca-certs, less, procps.
+# Base tooling: git, ripgrep, curl/ca-certs, less, procps, python, vim, and common
+# Unix utilities AI agents frequently invoke (grep/sed/awk/find/xargs).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         ripgrep \
@@ -20,15 +21,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         less \
         procps \
         openssh-client \
+        python3 \
+        python3-pip \
+        python3-venv \
+        vim \
+        grep \
+        sed \
+        gawk \
+        findutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the agents + the omo CLI globally to /usr/local so a per-project HOME/volume
 # can never shadow them. (omo is dual-published; 'oh-my-openagent' is the current name.)
+# Also install language servers for the built-in runtimes so agents can inspect / refactor
+# TypeScript/JavaScript and Python code without per-project setup.
 RUN npm install -g \
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
         "opencode-ai@${OPENCODE_VERSION}" \
         "oh-my-openagent@${OMO_VERSION}" \
+        "typescript-language-server" \
+        "pyright" \
     && npm cache clean --force
+
+# Python LSP toolchain complementing pyright (above) — rope-based refactoring,
+# jedi-powered completions. Installed globally as root so every project benefits.
+RUN pip3 install --no-cache-dir --break-system-packages python-lsp-server
 
 # Convenience launcher: Claude Code with permission prompts skipped.
 # This is safe ONLY because we are inside the container sandbox.
@@ -44,14 +61,13 @@ RUN chmod 0755 /usr/local/bin/agent-init.sh
 COPY configure-deepseek.mjs /usr/local/lib/configure-deepseek.mjs
 RUN chmod 0644 /usr/local/lib/configure-deepseek.mjs
 
-# The node base image already ships a non-root 'node' user at uid/gid 1000.
-# Using it keeps bind-mounted file ownership sane on macOS Docker / OrbStack.
+RUN usermod -l developer -d /home/developer -m node
 RUN rmdir /workspace 2>/dev/null || true
-USER node
-WORKDIR /home/node
+USER developer
+WORKDIR /home/developer
 
 # Pre-install omo (oh-my-openagent) into OpenCode. This writes a config TEMPLATE into the
-# image at /home/node/.config/opencode (omo plugin registration + agent->model map).
+# image at /home/developer/.config/opencode (omo plugin registration + agent->model map).
 # agent-init.sh seeds a per-project copy from this on first run, so omo is ready in every
 # project while project configs stay isolated.
 #   --no-tui          : run the installer non-interactively (no subscription interview)

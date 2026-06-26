@@ -67,7 +67,7 @@ _run_with_session() {
     container_start
     session_register
 
-    trap '_session_cleanup' EXIT INT TERM
+    trap '_session_cleanup' EXIT
 
     _compose exec -it agent "${cmd[@]}"
 }

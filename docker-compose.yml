@@ -13,7 +13,7 @@ services:
     stdin_open: true      # docker -i
     tty: true             # docker -t
     working_dir: /${PROJECT_NAME:-workspace}
-    user: "1000:1000"     # the image's built-in non-root 'node' user
+    user: "1000:1000"     # the image's built-in non-root 'developer' user
 
     environment:
       # ---- OpenCode + omo use DeepSeek (set DEEPSEEK_API_KEY in .env) ----
@@ -48,12 +48,12 @@ services:
       - ${PROJECT_DIR:-.}:/${PROJECT_NAME:-workspace}
 
       # OPTIONAL: reuse your git identity, read-only. Uncomment if you have ~/.gitconfig.
-      # - ${HOME}/.gitconfig:/home/node/.gitconfig:ro
+      # - ${HOME}/.gitconfig:/home/developer/.gitconfig:ro
 
       # Shared package caches — speed up repeated installs across sessions.
       # For UNTRUSTED projects, comment these out (poisoned cache risk).
-      - npm-cache:/home/node/.npm
-      - pip-cache:/home/node/.cache/pip
+      - npm-cache:/home/developer/.npm
+      - pip-cache:/home/developer/.cache/pip
 
     # ---- blast-radius limits: the container is the boundary, so cap what it can do ----
     security_opt:
