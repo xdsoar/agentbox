@@ -466,46 +466,50 @@ test_scenario_12() {
     pip_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pip3 --version 2>&1)
     assert_contains "12.3 pip3 available" "pip" "$pip_ver"
 
+    local py_sym_ver
+    py_sym_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec python --version 2>&1)
+    assert_contains "12.4 python symlink works" "Python 3" "$py_sym_ver"
+
     # ── vim ──
     local vim_ver
     vim_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec vim --version 2>&1 | head -1)
-    assert_contains "12.4 vim available" "Vi IMproved" "$vim_ver"
+    assert_contains "12.5 vim available" "Vi IMproved" "$vim_ver"
 
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sh -c 'echo "before" > /tmp/vim-test.txt' 2>&1
     AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec vim -c '%s/before/after/' -c 'wq' /tmp/vim-test.txt 2>&1
     local vim_out
     vim_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec cat /tmp/vim-test.txt 2>&1)
-    assert_eq "12.5 vim can edit" "after" "$(echo "$vim_out" | tr -d '\r\n')"
+    assert_eq "12.6 vim can edit" "after" "$(echo "$vim_out" | tr -d '\r\n')"
 
     # ── Linux CLI tools ──
     local grep_ver
     grep_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec grep --version 2>&1 | head -1)
-    assert_contains "12.6 grep available" "GNU grep" "$grep_ver"
+    assert_contains "12.7 grep available" "GNU grep" "$grep_ver"
 
     local sed_ver
     sed_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec sed --version 2>&1 | head -1)
-    assert_contains "12.7 sed available" "GNU sed" "$sed_ver"
+    assert_contains "12.8 sed available" "GNU sed" "$sed_ver"
 
     local awk_ver
     awk_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec awk --version 2>&1 | head -1)
-    assert_contains "12.8 awk available" "GNU Awk" "$awk_ver"
+    assert_contains "12.9 awk available" "GNU Awk" "$awk_ver"
 
     local find_ver
     find_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec find --version 2>&1 | head -1)
-    assert_contains "12.9 find available" "GNU findutils" "$find_ver"
+    assert_contains "12.10 find available" "GNU findutils" "$find_ver"
 
     # ── LSP / Language Servers ──
     local pyright_ver
     pyright_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pyright --version 2>&1)
-    assert_contains "12.10 pyright available" "pyright" "$pyright_ver"
+    assert_contains "12.11 pyright available" "pyright" "$pyright_ver"
 
     local tsls_ver
     tsls_ver=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec typescript-language-server --version 2>&1)
-    assert_ok "12.11 typescript-language-server available" test -n "$tsls_ver"
+    assert_ok "12.12 typescript-language-server available" test -n "$tsls_ver"
 
     local pylsp_out
     pylsp_out=$(AGENTBOX_PROJECT_DIR="$proj" "$AGENTBOX_BIN" exec pip3 list 2>&1)
-    assert_contains "12.12 python-lsp-server installed" "python-lsp-server" "$pylsp_out"
+    assert_contains "12.13 python-lsp-server installed" "python-lsp-server" "$pylsp_out"
 
     echo ""
 }
