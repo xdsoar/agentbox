@@ -31,6 +31,7 @@ source "$LIB_DIR/volume.sh"
 source "$LIB_DIR/devcontainer.sh"
 source "$LIB_DIR/session.sh"
 source "$LIB_DIR/container.sh"
+source "$LIB_DIR/migration.sh"
 
 # ── helpers ──────────────────────────────────────────────────────────────
 
@@ -84,6 +85,8 @@ _session_cleanup() {
 main() {
     # Ensure we're in the agentbox directory so compose files resolve
     cd "$AGENTBOX_HOME"
+
+    migration_check || _die "Migration failed — fix the error above and retry."
 
     case "${1:-}" in
         # ── high-level (session-aware) ──

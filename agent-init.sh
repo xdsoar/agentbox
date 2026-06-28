@@ -13,6 +13,13 @@ for d in \
     mkdir -p "$d"
 done
 
+# Initialize agentbox migration version marker on first run.
+# Derive .agent/ root from XDG_CONFIG_HOME (always set by docker-compose).
+_agent_root="$(dirname "${XDG_CONFIG_HOME:-/${PROJECT_NAME:-workspace}/.agent/config}")"
+if [ ! -f "$_agent_root/version" ]; then
+    echo "0" > "$_agent_root/version"
+fi
+
 # Seed the pre-installed OpenCode + omo config into this project on first run.
 # The image ships a template at /home/developer/.config/opencode (built by `oh-my-openagent install`).
 # Each project gets its own editable copy, so omo is ready everywhere without re-installing,
