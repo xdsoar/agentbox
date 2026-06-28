@@ -50,6 +50,10 @@ Usage:
   agentbox rebuild         Force rebuild image + recreate container
   agentbox clean           Remove container, volumes, and state
   agentbox status          Show container status
+  agentbox migration run <version>
+                          Run a migration script manually (no version change)
+  agentbox migration baseline <version>
+                          Set baseline version for next auto-migration
 EOF
 }
 
@@ -86,9 +90,31 @@ main() {
     # Ensure we're in the agentbox directory so compose files resolve
     cd "$AGENTBOX_HOME"
 
-    migration_check || _die "Migration failed — fix the error above and retry."
+    # Skip auto-migration for manual migration subcommand
+    if [ "${1:-}" != "migration" ]; then
+        migration_check || _die "Migration failed — fix the error above and retry."
+    fi
 
     case "${1:-}" in
+        # ── migration (manual control) ──
+        migration)
+            shift
+            case "${1:-}" in
+                run)
+                    shift
+                    migration_run "${1:?Usage: agentbox migration run <version>}"
+                    ;;
+                baseline)
+                    shift
+                    migration_baseline "${1:?Usage: agentbox migration baseline <version>}"
+                    ;;
+                *)
+                    echo "Current version: $(_migration_read_version)"
+                    echo "Target version:  $AGENTBOX_MIGRATION_VERSION"
+                    ;;
+            esac
+            ;;
+
         # ── high-level (session-aware) ──
         "")
             _run_with_session bash

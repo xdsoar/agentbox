@@ -35,6 +35,29 @@ _migration_write_version() {
     echo "$v" > "$vf"
 }
 
+# Execute a single migration script without updating the version file.
+# Usage: migration_run <version>
+migration_run() {
+    local v="$1"
+    local script="$AGENTBOX_HOME/migrations/${v}.sh"
+
+    if [ ! -f "$script" ]; then
+        echo "[agentbox] Migration script ${v}.sh not found." >&2
+        return 1
+    fi
+
+    echo "[agentbox] Running migration ${v} (manual, no version change)"
+    bash "$script"
+}
+
+# Set the baseline version so future auto-migrations start from this point.
+# Usage: migration_baseline <version>
+migration_baseline() {
+    local v="$1"
+    _migration_write_version "$v"
+    echo "[agentbox] Baseline set to v${v}"
+}
+
 migration_check() {
     local current target
     current="$(_migration_read_version)"
