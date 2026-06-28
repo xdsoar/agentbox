@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
         python3-venv \
+        python-is-python3 \
         vim \
         grep \
         sed \
@@ -57,9 +58,9 @@ RUN printf '#!/usr/bin/env bash\nexec claude --dangerously-skip-permissions "$@"
 COPY agent-init.sh /usr/local/bin/agent-init.sh
 RUN chmod 0755 /usr/local/bin/agent-init.sh
 
-# Build-time config: pin OpenCode + omo to deepseek-v4-pro only.
-COPY configure-deepseek.mjs /usr/local/lib/configure-deepseek.mjs
-RUN chmod 0644 /usr/local/lib/configure-deepseek.mjs
+# Build-time config: set up DeepSeek (text) + Gemini (multimodal) providers.
+COPY configure-models.mjs /usr/local/lib/configure-models.mjs
+RUN chmod 0644 /usr/local/lib/configure-models.mjs
 
 RUN usermod -l developer -d /home/developer -m node
 RUN rmdir /workspace 2>/dev/null || true
@@ -79,11 +80,11 @@ WORKDIR /home/developer
 # cached under that project's .agent/cache). For an air-gapped build, point npm/bun at an
 # internal mirror and pre-warm that cache.
 # NOTE: in --no-tui mode omo wants ALL provider flags stated explicitly.
-ARG OMO_INSTALL_FLAGS="--no-tui --platform=opencode --claude=no --openai=no --gemini=no --copilot=no"
+ARG OMO_INSTALL_FLAGS="--no-tui --platform=opencode --claude=no --openai=no --gemini=yes --copilot=no"
 RUN oh-my-openagent install ${OMO_INSTALL_FLAGS}
 
-# Pin OpenCode's default and every omo agent/category to deepseek-v4-pro only.
-RUN DEEPSEEK_BASE_URL="${DEEPSEEK_BASE_URL}" node /usr/local/lib/configure-deepseek.mjs
+# Configure models: DeepSeek for text agents, Gemini for multimodal agents.
+RUN DEEPSEEK_BASE_URL="${DEEPSEEK_BASE_URL}" node /usr/local/lib/configure-models.mjs
 
 ENTRYPOINT ["/usr/local/bin/agent-init.sh"]
 CMD ["bash"]

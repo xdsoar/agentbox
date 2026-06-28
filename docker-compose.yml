@@ -16,8 +16,9 @@ services:
     user: "1000:1000"     # the image's built-in non-root 'developer' user
 
     environment:
-      # ---- OpenCode + omo use DeepSeek (set DEEPSEEK_API_KEY in .env) ----
+      # ---- OpenCode + omo: DeepSeek for text, Gemini for multimodal (set in .env) ----
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
       # ---- Claude Code: Pro/Max SUBSCRIPTION via OAuth token (set in .env) ----
       # Generate once with `claude setup-token`; bills to your subscription, not the API.
