@@ -68,11 +68,12 @@ oc.autoupdate = false;
 
 // Register the excalidrawer MCP server so agents can generate hand-drawn diagrams.
 // The launcher pre-loads Xiaolai CJK font for Chinese text support in PNG output.
-oc.mcpServers = {
-  ...(oc.mcpServers || {}),
+oc.mcp = {
+  ...(oc.mcp || {}),
   excalidrawer: {
-    command: "node",
-    args: ["/usr/local/bin/excalidrawer-mcp-launcher.mjs"],
+    type: "local",
+    command: ["node", "/usr/local/bin/excalidrawer-mcp-launcher.mjs"],
+    enabled: true,
   },
 };
 

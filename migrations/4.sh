@@ -12,13 +12,14 @@ if [ ! -f "$OC_JSON" ]; then
     exit 0
 fi
 
-if jq -e '.mcpServers.excalidrawer' "$OC_JSON" > /dev/null 2>&1; then
+if jq -e '.mcp.excalidrawer' "$OC_JSON" > /dev/null 2>&1; then
     echo "[migration] v4: excalidrawer MCP already registered, skipping."
 else
     echo "[migration] v4: registering excalidrawer MCP server"
-    jq '.mcpServers.excalidrawer = {
-        "command": "node",
-        "args": ["/usr/local/bin/excalidrawer-mcp-launcher.mjs"]
+    jq '.mcp.excalidrawer = {
+        "type": "local",
+        "command": ["node", "/usr/local/bin/excalidrawer-mcp-launcher.mjs"],
+        "enabled": true
     }' "$OC_JSON" > "$OC_JSON.tmp" && mv "$OC_JSON.tmp" "$OC_JSON"
 fi
 
