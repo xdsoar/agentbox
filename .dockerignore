@@ -1,0 +1,25 @@
+# Runtime state — never needed for image build
+.agent/
+.sisyphus/
+.env
+
+# Documentation & specs
+README.md
+TODO.md
+spec/
+
+# Tests & migrations (run on host, not in image)
+tests/
+migrations/
+
+# Examples / templates
+.agentbox.example.yml
+devcontainer.example.json
+.env.example
+
+# OS noise
+.DS_Store
+
+# Git (auto-excluded by default, explicit for clarity)
+.git/
+.gitignore
