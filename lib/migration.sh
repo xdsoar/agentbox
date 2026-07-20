@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-AGENTBOX_MIGRATION_VERSION=4
+AGENTBOX_MIGRATION_VERSION=5
 
 _migration_version_file() {
     echo "$PROJECT_DIR/.agent/version"
