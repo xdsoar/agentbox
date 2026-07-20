@@ -39,4 +39,12 @@ if [ -f "/.agentbox/post-create.sh" ]; then
     bash "/.agentbox/post-create.sh" || echo "[agentbox] WARNING: postCreate command failed" >&2
 fi
 
+# Redirect npm + pip caches into the workspace to avoid Docker named-volume
+# permission issues (named volumes are root-owned; the workspace is bind-mounted
+# with the correct host UID). Without this, OpenCode's plugin dependency install
+# fails with EACCES on /home/developer/.npm/_cacache.
+export npm_config_cache="${XDG_CACHE_HOME:-/${PROJECT_NAME:-workspace}/.agent/cache}/npm"
+export PIP_CACHE_DIR="${XDG_CACHE_HOME:-/${PROJECT_NAME:-workspace}/.agent/cache}/pip"
+mkdir -p "$npm_config_cache" "$PIP_CACHE_DIR"
+
 exec "$@"
