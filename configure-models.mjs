@@ -65,8 +65,19 @@ oc.provider.gemini = {
 oc.model = DEEPSEEK_MODEL;
 oc.small_model = DEEPSEEK_MODEL;
 oc.autoupdate = false;
+
+// Register the excalidrawer MCP server so agents can generate hand-drawn diagrams.
+// The launcher pre-loads Xiaolai CJK font for Chinese text support in PNG output.
+oc.mcpServers = {
+  ...(oc.mcpServers || {}),
+  excalidrawer: {
+    command: "node",
+    args: ["/usr/local/bin/excalidrawer-mcp-launcher.mjs"],
+  },
+};
+
 writeFileSync(ocPath, JSON.stringify(oc, null, 2));
-console.log(`opencode.json -> default model ${DEEPSEEK_MODEL}, providers 'deepseek' + 'gemini' added`);
+console.log(`opencode.json -> default model ${DEEPSEEK_MODEL}, providers 'deepseek' + 'gemini', MCP 'excalidrawer'`);
 
 // 2) omo agent config — pin agents by capability:
 //    - Multimodal agents (multimodal-looker) → Gemini

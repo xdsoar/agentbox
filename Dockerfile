@@ -13,6 +13,7 @@ ARG DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic
 
 # Base tooling: git, ripgrep, curl/ca-certs, less, procps, python, vim, and common
 # Unix utilities AI agents frequently invoke (grep/sed/awk/find/xargs).
+# fonts-noto-cjk: CJK system fallback for excalidrawer diagram rendering.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         ripgrep \
@@ -30,6 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         sed \
         gawk \
         findutils \
+        fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the agents + the omo CLI globally to /usr/local so a per-project HOME/volume
@@ -42,11 +44,25 @@ RUN npm install -g \
         "oh-my-openagent@${OMO_VERSION}" \
         "typescript-language-server" \
         "pyright" \
+        "excalidrawer@latest" \
     && npm cache clean --force
 
 # Python LSP toolchain complementing pyright (above) — rope-based refactoring,
 # jedi-powered completions. Installed globally as root so every project benefits.
 RUN pip3 install --no-cache-dir --break-system-packages python-lsp-server
+
+# Xiaolai hand-drawn CJK font — enables Chinese text in Excalidraw diagrams.
+# Download from GitHub releases; if unavailable the build continues without it
+# and CJK text falls back to NotoSansCJK (installed above).
+RUN mkdir -p /usr/local/share/fonts \
+    && curl -fsSL -o /usr/local/share/fonts/Xiaolai.ttf \
+        "https://github.com/lxgw/kose-font/releases/download/v3.126/Xiaolai-Regular.ttf" \
+    && echo "Xiaolai font installed" \
+    || echo "WARNING: Xiaolai font download failed — CJK will use NotoSansCJK fallback"
+
+# Launcher that pre-registers the Xiaolai font before starting the excalidrawer MCP server.
+COPY excalidrawer-mcp-launcher.mjs /usr/local/bin/excalidrawer-mcp-launcher.mjs
+RUN chmod 0755 /usr/local/bin/excalidrawer-mcp-launcher.mjs
 
 # Convenience launcher: Claude Code with permission prompts skipped.
 # This is safe ONLY because we are inside the container sandbox.
