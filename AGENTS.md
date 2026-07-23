@@ -97,8 +97,15 @@ When adding a globally-installed MCP server (like `excalidrawer`), you **MUST** 
 ### Adding a New MCP Server
 
 1. Add entry to `MCP_SERVERS` in `configure-models.mjs`.
-2. Rebuild the image (`docker compose build`).
-3. Delete `.agent/` in existing projects to pick up the new config on next run.
+2. Write a migration script (`migrations/<next-version>.sh`) that appends the new MCP server to existing config files:
+   - **OpenCode**: add entry under `.mcp` in `.agent/config/opencode/opencode.json` (use `jq`)
+   - **Claude Code**: add entry under `.mcpServers` in `.agent/claude/claude.json` (use `jq`)
+   - **Codex**: append `[mcp_servers.<name>]` block to `~/.codex/config.toml` — but since Codex config lives inside the container, the migration can write a seed file to `.agent/codex-mcp-seed.toml` and `agent-init.sh` picks it up on next container start
+3. Bump `AGENTBOX_MIGRATION_VERSION` in `lib/migration.sh`.
+4. Rebuild the image (`docker compose build`).
+
+Existing projects will pick up the new MCP server through the migration on next `agentbox start`.
+New projects get it automatically via `agent-init.sh` seeding.
 
 No other files need changes — the helper functions handle all three formats automatically.
 
