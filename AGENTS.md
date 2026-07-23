@@ -12,6 +12,7 @@ Host                              Docker Container
 │  (source code)    │             │                          │
 │                   │             │  opencode-ai (global)     │
 │  .env             │──env──→    │  claude-code (global)     │
+│                   │             │  codex (global)            │
 │  API keys         │             │  oh-my-openagent (global) │
 │                   │             │  typescript-lsp (global)  │
 │  agentbox CLI     │             │  pyright (global)         │
@@ -19,7 +20,7 @@ Host                              Docker Container
 ```
 
 - **Base image**: `node:22-bookworm-slim`
-- **Globally installed**: `opencode-ai`, `@anthropic-ai/claude-code`, `oh-my-openagent`, `typescript-language-server`, `pyright`, `python-lsp-server`, `excalidrawer` (diagram generation)
+- **Globally installed**: `opencode-ai`, `@anthropic-ai/claude-code`, `@openai/codex`, `oh-my-openagent`, `typescript-language-server`, `pyright`, `python-lsp-server`, `excalidrawer` (diagram generation)
 - **System fonts**: `fonts-noto-cjk` (CJK fallback), `Xiaolai` (hand-drawn CJK for Excalidraw)
 - **NOT installed in container**: Playwright, browsers, any language runtimes beyond Node.js + Python
 - **User**: `developer` (uid 1000), remapped from `node`

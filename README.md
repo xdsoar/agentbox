@@ -6,7 +6,7 @@
 
 ## Features
 
-- **One image, two agents** — Claude Code and OpenCode pre-installed globally
+- **One image, three agents** — Claude Code, OpenCode, and Codex pre-installed globally
 - **Declarative environment** — define runtimes, caches, and setup commands in `.agent/devcontainer.json`
 - **Smart container reuse** — hash-based change detection rebuilds only when config changes
 - **Multi-session sharing** — multiple terminals share one container; auto-stops when the last session exits
