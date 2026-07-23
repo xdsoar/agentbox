@@ -1,13 +1,80 @@
 // Force OpenCode + omo to use DeepSeek V4 Pro for text and Gemini for multimodal.
 // Runs at build time, right after `oh-my-openagent install`, against the image's
 // config TEMPLATE at ~/.config/opencode. agent-init.sh then seeds this per project.
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DEEPSEEK_MODEL = 'deepseek/deepseek-v4-pro';
 const GEMINI_MODEL = 'gemini/gemini-3.5-flash';
 const HOME = process.env.HOME || '/home/developer';
 const cfgDir = join(HOME, '.config', 'opencode');
+
+// ── Global MCP servers ─────────────────────────────────────────────────────
+// Define MCP servers ONCE here. When adding a new global MCP tool, define
+// the server entry below — the three agent-specific configs are auto-generated.
+// Template dir: /home/developer/.agentbox/  (seeded per-project by agent-init.sh)
+//   - OpenCode:   .agent/config/opencode/opencode.json  (mcp key)
+//   - Claude Code: .agent/claude/claude.json            (CLAUDE_CONFIG_DIR, mcpServers)
+//   - Codex:       ~/.codex/config.toml                 (mcp_servers section)
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * All globally-installed MCP servers. Each entry maps to all three agents.
+ *
+ * Fields:
+ *   name    — server identifier (used as MCP key)
+ *   command — array: [executable, ...args]
+ */
+const MCP_SERVERS = [
+  {
+    name: 'excalidrawer',
+    command: ['node', '/usr/local/bin/excalidrawer-mcp-launcher.mjs'],
+  },
+];
+
+/**
+ * Generate OpenCode MCP config (JSON — `opencode.json` `mcp` key).
+ */
+function buildOpenCodeMcp(existingMcp = {}) {
+  const mcp = { ...existingMcp };
+  for (const s of MCP_SERVERS) {
+    mcp[s.name] = {
+      type: 'local',
+      command: s.command,
+      enabled: true,
+    };
+  }
+  return mcp;
+}
+
+/**
+ * Generate Claude Code MCP config (JSON — `~/.claude.json` or `.mcp.json`).
+ */
+function buildClaudeMcp() {
+  const servers = {};
+  for (const s of MCP_SERVERS) {
+    servers[s.name] = {
+      type: 'stdio',
+      command: s.command[0],
+      args: s.command.slice(1),
+    };
+  }
+  return { mcpServers: servers };
+}
+
+/**
+ * Generate Codex MCP config (TOML — `~/.codex/config.toml`).
+ */
+function buildCodexMcp() {
+  const lines = [];
+  for (const s of MCP_SERVERS) {
+    lines.push(`[mcp_servers.${s.name}]`);
+    lines.push(`command = "${s.command[0]}"`);
+    lines.push(`args = ${JSON.stringify(s.command.slice(1))}`);
+    lines.push('');
+  }
+  return lines.join('\n');
+}
 
 // Tolerant parse: omo may emit JSONC (// or /* */ comments). Try strict JSON first.
 function parseLoose(text) {
@@ -66,19 +133,25 @@ oc.model = DEEPSEEK_MODEL;
 oc.small_model = DEEPSEEK_MODEL;
 oc.autoupdate = false;
 
-// Register the excalidrawer MCP server so agents can generate hand-drawn diagrams.
-// The launcher pre-loads Xiaolai CJK font for Chinese text support in PNG output.
-oc.mcp = {
-  ...(oc.mcp || {}),
-  excalidrawer: {
-    type: "local",
-    command: ["node", "/usr/local/bin/excalidrawer-mcp-launcher.mjs"],
-    enabled: true,
-  },
-};
+// Register global MCP servers in OpenCode config.
+oc.mcp = buildOpenCodeMcp(oc.mcp);
 
 writeFileSync(ocPath, JSON.stringify(oc, null, 2));
-console.log(`opencode.json -> default model ${DEEPSEEK_MODEL}, providers 'deepseek' + 'gemini', MCP 'excalidrawer'`);
+const mcpNames = MCP_SERVERS.map(s => s.name).join(', ');
+console.log(`opencode.json -> default model ${DEEPSEEK_MODEL}, providers 'deepseek' + 'gemini', MCP: ${mcpNames}`);
+
+// ── Claude Code MCP template (user-scoped, seeded to CLAUDE_CONFIG_DIR at runtime) ──
+const tmplDir = join(HOME, '.agentbox');
+mkdirSync(tmplDir, { recursive: true });
+
+const claudeMcpPath = join(tmplDir, 'claude-mcp.json');
+writeFileSync(claudeMcpPath, JSON.stringify(buildClaudeMcp(), null, 2));
+console.log(`claude-mcp.json (template) -> MCP: ${mcpNames}`);
+
+// ── Codex MCP template (user-scoped, seeded to ~/.codex/config.toml at runtime) ──
+const codexMcpPath = join(tmplDir, 'codex-mcp.toml');
+writeFileSync(codexMcpPath, buildCodexMcp());
+console.log(`codex-mcp.toml (template) -> MCP: ${mcpNames}`);
 
 // 2) omo agent config — pin agents by capability:
 //    - Multimodal agents (multimodal-looker) → Gemini

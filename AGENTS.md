@@ -37,7 +37,7 @@ Host                              Docker Container
 | `lib/devcontainer.sh` | `.agent/devcontainer.json` parser + compose override generation |
 | `lib/volume.sh` | Named volume management |
 | `agent-init.sh` | Container ENTRYPOINT — creates per-project state dirs, seeds OpenCode config, runs postCreate |
-| `configure-models.mjs` | Build-time: configures DeepSeek + Gemini providers in OpenCode template config |
+| `configure-models.mjs` | Build-time: configures DeepSeek + Gemini providers + generates MCP templates for all three agents |
 
 ## State Isolation
 
@@ -70,5 +70,36 @@ Per-project extra mounts (SSH socket, shared libs) go in `.agentbox.yml` (docker
 - Only the project directory is mounted by default
 - `/tmp` is tmpfs
 - API keys are in container env — any agent process can read them
+
+## Global MCP Tools
+
+When adding a globally-installed MCP server (like `excalidrawer`), you **MUST** configure it for all three agents — not just OpenCode. Define the server once in `configure-models.mjs` → `MCP_SERVERS`, and the script auto-generates the three agent-specific configs.
+
+### How It Works
+
+| Agent | Config File | Location | Format |
+|---|---|---|---|
+| **OpenCode** | `opencode.json` | `.agent/config/opencode/` (seeded from `~/.config/opencode/` template) | `mcp` key in JSON: `type: "local"`, `command: [...]` |
+| **Claude Code** | `claude.json` | `.agent/claude/` (CLAUDE_CONFIG_DIR) — user-scoped, per-project isolated | `mcpServers` key in JSON: `type: "stdio"`, `command` + `args` |
+| **Codex** | `config.toml` | `~/.codex/` — user-scoped, per-container | `[mcp_servers.<name>]` section in TOML |
+
+**Build time** (`configure-models.mjs`):
+1. Define all MCP servers in the `MCP_SERVERS` array (name + command).
+2. Three helper functions generate each agent's native format.
+3. OpenCode config written directly to image template (`~/.config/opencode/opencode.json`).
+4. Claude Code + Codex templates saved to `/home/developer/.agentbox/`.
+
+**Runtime** (`agent-init.sh`, first run per project):
+- OpenCode template → `.agent/config/opencode/`
+- Claude Code template → `.agent/claude/claude.json`
+- Codex template → `~/.codex/config.toml`
+
+### Adding a New MCP Server
+
+1. Add entry to `MCP_SERVERS` in `configure-models.mjs`.
+2. Rebuild the image (`docker compose build`).
+3. Delete `.agent/` in existing projects to pick up the new config on next run.
+
+No other files need changes — the helper functions handle all three formats automatically.
 
 
