@@ -9,6 +9,7 @@ FROM node:22-bookworm-slim
 ARG CLAUDE_CODE_VERSION=latest
 ARG OPENCODE_VERSION=latest
 ARG OMO_VERSION=latest
+ARG CODEX_VERSION=latest
 ARG DEEPSEEK_BASE_URL=https://api.deepseek.com/anthropic
 
 # Base tooling: git, ripgrep, curl/ca-certs, less, procps, python, vim, and common
@@ -42,6 +43,7 @@ RUN npm install -g \
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
         "opencode-ai@${OPENCODE_VERSION}" \
         "oh-my-openagent@${OMO_VERSION}" \
+        "@openai/codex@${CODEX_VERSION}" \
         "typescript-language-server" \
         "pyright" \
         "excalidrawer@latest" \

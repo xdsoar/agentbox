@@ -7,6 +7,7 @@ services:
       args:
         CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-latest}
         OPENCODE_VERSION: ${OPENCODE_VERSION:-latest}
+        CODEX_VERSION: ${CODEX_VERSION:-latest}
     image: agent-box:local
 
     init: true            # reap zombies / forward signals cleanly for the TUI
