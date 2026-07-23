@@ -6,6 +6,7 @@ set -euo pipefail
 # so two projects never share state. Wipe a project's agent memory with: rm -rf .agent
 for d in \
     "${CLAUDE_CONFIG_DIR:-/${PROJECT_NAME:-workspace}/.agent/claude}" \
+    "${CODEX_HOME:-/${PROJECT_NAME:-workspace}/.agent/codex}" \
     "${XDG_CONFIG_HOME:-/${PROJECT_NAME:-workspace}/.agent/config}" \
     "${XDG_DATA_HOME:-/${PROJECT_NAME:-workspace}/.agent/data}" \
     "${XDG_STATE_HOME:-/${PROJECT_NAME:-workspace}/.agent/state}" \
@@ -44,12 +45,13 @@ if [ ! -f "$_CLAUDE_JSON" ] && [ -f "$_CLAUDE_TMPL" ]; then
 fi
 
 # ── Seed Codex MCP config ────────────────────────────────────────────────
-# Codex reads ~/.codex/config.toml for user-scoped MCP servers.
+# Codex reads $CODEX_HOME/config.toml for user-scoped MCP servers.
+# (CODEX_HOME defaults to ~/.codex; docker-compose sets it to .agent/codex/ for persistence.)
 # Two sources, checked in priority order:
 #   1. Migration seed: .agent/codex-mcp-seed.toml (written by migration/6.sh on the host)
 #   2. Image template:  /home/developer/.agentbox/codex-mcp.toml (baked at build time)
 # Only seeded on first run; won't overwrite existing config.
-_CODEX_CONFIG="${HOME:-/home/developer}/.codex/config.toml"
+_CODEX_CONFIG="${CODEX_HOME:-${HOME:-/home/developer}/.codex}/config.toml"
 _CODEX_SEED="/${PROJECT_NAME:-workspace}/.agent/codex-mcp-seed.toml"
 _CODEX_TMPL="/home/developer/.agentbox/codex-mcp.toml"
 

@@ -39,6 +39,7 @@ services:
       # This is the whole point: each project gets its own dotfiles, so no cross-project
       # memory bleed, and your host ~/.claude / ~/.config are never touched.
       CLAUDE_CONFIG_DIR: /${PROJECT_NAME:-workspace}/.agent/claude
+      CODEX_HOME: /${PROJECT_NAME:-workspace}/.agent/codex
       XDG_CONFIG_HOME: /${PROJECT_NAME:-workspace}/.agent/config
       XDG_DATA_HOME: /${PROJECT_NAME:-workspace}/.agent/data
       XDG_STATE_HOME: /${PROJECT_NAME:-workspace}/.agent/state
