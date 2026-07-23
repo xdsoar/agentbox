@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # session.sh — multi-session tracking for agentbox containers.
 #
-# One container, multiple simultaneous `agentbox enter`/`agentbox opencode` sessions.
+# One container, multiple simultaneous `agentbox enter`/`agentbox opencode`/`agentbox codex` sessions.
 # The container is stopped only when ALL sessions have exited.
 #
 # Session markers: .agent/container/sessions/<session-id> (empty files).

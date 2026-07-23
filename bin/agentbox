@@ -5,6 +5,7 @@
 #   agentbox              # start container + enter interactive shell
 #   agentbox opencode     # start container + launch OpenCode TUI
 #   agentbox claude       # start container + launch Claude Code
+#   agentbox codex        # start container + launch Codex CLI (OpenAI)
 #   agentbox run <cmd>    # start container + exec <cmd>
 #   agentbox start        # ensure container is running
 #   agentbox stop         # stop container (session-aware)
@@ -43,6 +44,7 @@ Usage:
   agentbox                 Start container + enter shell (interactive)
   agentbox opencode        Start container + launch OpenCode TUI
   agentbox claude          Start container + launch Claude Code
+  agentbox codex           Start container + launch Codex CLI
   agentbox run <cmd...>    Start container + run command
 
   agentbox start           Ensure container is running (background)
@@ -124,6 +126,10 @@ main() {
             ;;
         claude)
             _run_with_session bash -c 'exec claude --dangerously-skip-permissions "$@"' -- "$@"
+            ;;
+        codex)
+            shift
+            _run_with_session codex --dangerously-bypass-approvals-and-sandbox "$@"
             ;;
         run)
             shift
