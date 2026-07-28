@@ -86,10 +86,10 @@ USER developer
 WORKDIR /home/developer
 
 # Pre-create cache directories with developer ownership so that, when Docker
-# initializes the named volumes (npm-cache, pip-cache) on first mount, the
-# copied-in directories keep the correct UID. Without this, named volumes
-# default to root ownership and npm/pip fail with EACCES at container runtime.
-RUN mkdir -p .npm .cache/pip
+# initializes the named volumes (npm-cache, pip-cache, codex-auth) on first
+# mount, the copied-in directories keep the correct UID. Without this, named
+# volumes default to root ownership and npm/pip/codex fail with EACCES.
+RUN mkdir -p .npm .cache/pip .codex-auth
 
 # Pre-install omo (oh-my-openagent) into OpenCode. This writes a config TEMPLATE into the
 # image at /home/developer/.config/opencode (omo plugin registration + agent->model map).
