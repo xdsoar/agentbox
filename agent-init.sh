@@ -68,6 +68,14 @@ if [ ! -f "$_CODEX_CONFIG" ]; then
     fi
 fi
 
+# Symlink Codex auth.json to shared volume so login once works across all projects.
+_CODEX_AUTH="${CODEX_HOME:-/${PROJECT_NAME:-workspace}/.agent/codex}/auth.json"
+_CODEX_AUTH_SHARED="/home/developer/.codex-auth/auth.json"
+if [ ! -L "$_CODEX_AUTH" ]; then
+    rm -f "$_CODEX_AUTH"
+    ln -sf "$_CODEX_AUTH_SHARED" "$_CODEX_AUTH"
+fi
+
 # Run postCreate hook if injected by agentbox CLI on container creation.
 # The script is mounted at /.agentbox/post-create.sh and is only present
 # on the FIRST start after container creation (agentbox removes it after execution).
