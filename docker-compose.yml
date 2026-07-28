@@ -85,3 +85,4 @@ volumes:
   npm-cache:
   pip-cache:
   codex-auth:
+    name: agentbox-codex-auth
