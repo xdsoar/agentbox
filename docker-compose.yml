@@ -21,6 +21,11 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
+      # ---- Codex: set this for per-project codex usage without per-project login ----
+      # Codex stores auth in $CODEX_HOME/auth.json; share it via env var so auth stays
+      # shared while CODEX_HOME (→ .agent/codex/) keeps project state isolated.
+      CODEX_API_KEY: ${CODEX_API_KEY:-}
+
       # ---- Claude Code: Pro/Max SUBSCRIPTION via OAuth token (set in .env) ----
       # Generate once with `claude setup-token`; bills to your subscription, not the API.
       # Do NOT also set ANTHROPIC_API_KEY — an API key would override the subscription.
