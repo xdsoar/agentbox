@@ -35,12 +35,19 @@ _sha256() {
 # ── hash computation ─────────────────────────────────────────────────────
 
 _current_image_hash() {
-    # Hash both the base agentbox Dockerfile AND any project-specific Dockerfile
-    # (specified via build.dockerfile in devcontainer.json).
+    # Hash all files that affect the container image — not just the Dockerfile.
+    # When any of these change, `agentbox start` automatically triggers a rebuild.
     local tmpfile
     tmpfile=$(mktemp)
-    cat "$AGENTBOX_HOME/Dockerfile" 2>/dev/null >> "$tmpfile" || true
 
+    # Core build files (the image is a product of all of these)
+    cat "$AGENTBOX_HOME/Dockerfile"                   2>/dev/null >> "$tmpfile" || true
+    cat "$AGENTBOX_HOME/docker-compose.yml"            2>/dev/null >> "$tmpfile" || true
+    cat "$AGENTBOX_HOME/configure-models.mjs"          2>/dev/null >> "$tmpfile" || true
+    cat "$AGENTBOX_HOME/agent-init.sh"                 2>/dev/null >> "$tmpfile" || true
+    cat "$AGENTBOX_HOME/excalidrawer-mcp-launcher.mjs" 2>/dev/null >> "$tmpfile" || true
+
+    # Project-specific Dockerfile (via .agent/devcontainer.json build.dockerfile)
     local config="$PROJECT_DIR/.agent/devcontainer.json"
     if [ -f "$config" ] && command -v jq &>/dev/null; then
         local custom_df
