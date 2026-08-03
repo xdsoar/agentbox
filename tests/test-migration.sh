@@ -47,6 +47,8 @@ JSON
         echo "CODEX_SKIP"
     else
         cat > "$codex_seed" <<'TOML'
+check_for_update_on_startup = false
+
 [mcp_servers.excalidrawer]
 command = "node"
 args = ["/usr/local/bin/excalidrawer-mcp-launcher.mjs"]
@@ -99,6 +101,12 @@ if grep -q "mcp_servers.excalidrawer" "$PROJECT_DIR/.agent/codex-mcp-seed.toml" 
     _pass "1.6 codex-mcp-seed.toml contains excalidrawer MCP"
 else
     _fail "1.6 codex-mcp-seed.toml missing excalidrawer MCP"
+fi
+
+if grep -q "check_for_update_on_startup" "$PROJECT_DIR/.agent/codex-mcp-seed.toml" 2>/dev/null; then
+    _pass "1.7 codex-mcp-seed.toml disables auto-update check"
+else
+    _fail "1.7 codex-mcp-seed.toml missing check_for_update_on_startup"
 fi
 
 # ── Test 2: Existing Claude config — Claude skipped, Codex still seeded ─

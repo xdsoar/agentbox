@@ -37,6 +37,8 @@ if [ -f "$CODEX_SEED" ]; then
     echo "[migration] v6: Codex seed already exists, skipping."
 else
     cat > "$CODEX_SEED" <<'TOML'
+check_for_update_on_startup = false
+
 [mcp_servers.excalidrawer]
 command = "node"
 args = ["/usr/local/bin/excalidrawer-mcp-launcher.mjs"]

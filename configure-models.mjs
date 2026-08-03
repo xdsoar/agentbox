@@ -67,6 +67,9 @@ function buildClaudeMcp() {
  */
 function buildCodexMcp() {
   const lines = [];
+  // Disable auto-update prompt — versions are managed via Docker image rebuilds.
+  lines.push('check_for_update_on_startup = false');
+  lines.push('');
   for (const s of MCP_SERVERS) {
     lines.push(`[mcp_servers.${s.name}]`);
     lines.push(`command = "${s.command[0]}"`);

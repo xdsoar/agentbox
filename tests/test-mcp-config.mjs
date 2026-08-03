@@ -63,6 +63,8 @@ function buildClaudeMcp() {
 
 function buildCodexMcp() {
   const lines = [];
+  lines.push('check_for_update_on_startup = false');
+  lines.push('');
   for (const s of MCP_SERVERS) {
     lines.push(`[mcp_servers.${s.name}]`);
     lines.push(`command = "${s.command[0]}"`);
@@ -112,10 +114,11 @@ assert('3.7 valid JSON output', typeof ccJson === 'string' && ccJson.length > 10
 
 console.log('\n=== Codex MCP (buildCodexMcp) ===');
 const codexToml = buildCodexMcp();
-assertContains('4.1 contains [mcp_servers.excalidrawer]', codexToml, '[mcp_servers.excalidrawer]');
-assertContains('4.2 contains command = "node"', codexToml, 'command = "node"');
-assertContains('4.3 contains args array with launcher', codexToml, '/usr/local/bin/excalidrawer-mcp-launcher.mjs');
-assert('4.4 output ends with newline (valid TOML)', codexToml.endsWith('\n'));
+assertContains('4.1 contains check_for_update_on_startup = false', codexToml, 'check_for_update_on_startup = false');
+assertContains('4.2 contains [mcp_servers.excalidrawer]', codexToml, '[mcp_servers.excalidrawer]');
+assertContains('4.3 contains command = "node"', codexToml, 'command = "node"');
+assertContains('4.4 contains args array with launcher', codexToml, '/usr/local/bin/excalidrawer-mcp-launcher.mjs');
+assert('4.5 output ends with newline (valid TOML)', codexToml.endsWith('\n'));
 
 // ── Cross-agent consistency ─────────────────────────────────────────────
 
@@ -145,6 +148,8 @@ function buildClaudeMcpExtra() {
 }
 function buildCodexMcpExtra() {
   const lines = [];
+  lines.push('check_for_update_on_startup = false');
+  lines.push('');
   for (const s of MCP_EXTRA) {
     lines.push(`[mcp_servers.${s.name}]`);
     lines.push(`command = "${s.command[0]}"`);

@@ -148,7 +148,7 @@ container_start() {
         # Config changed: destroy old container, rebuild, recreate
         echo "[agentbox] Config changed — rebuilding container..."
         _compose down
-        _compose build
+        _compose build --no-cache
         _write_postcreate_file
         _compose up -d --wait
         _save_hashes
