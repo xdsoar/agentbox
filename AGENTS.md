@@ -47,7 +47,7 @@ All agent state (memory, config, history, caches) is redirected into `./.agent/`
 
 - **First run**: `docker compose build` → `up -d --wait`
 - **Config unchanged**: Reuses existing container (`docker compose start`)
-- **Any build-critical file changed** (Dockerfile, docker-compose.yml, configure-models.mjs, agent-init.sh, excalidrawer-mcp-launcher.mjs, or devcontainer features): Detects via SHA-256 hash → destroys old → rebuilds → recreates
+- **Any build-critical file changed** (.env, Dockerfile, docker-compose.yml, configure-models.mjs, agent-init.sh, excalidrawer-mcp-launcher.mjs, or devcontainer features): Detects via SHA-256 hash → destroys old → rebuilds → recreates
 - **postCreateCommand**: Executes once on first container creation; skipped on reuse
 - **Auto-stop**: Container stops when last active session exits
 

@@ -43,6 +43,7 @@ _current_image_hash() {
     # Core build files (the image is a product of all of these)
     cat "$AGENTBOX_HOME/Dockerfile"                   2>/dev/null >> "$tmpfile" || true
     cat "$AGENTBOX_HOME/docker-compose.yml"            2>/dev/null >> "$tmpfile" || true
+    cat "$AGENTBOX_HOME/.env"                          2>/dev/null >> "$tmpfile" || true
     cat "$AGENTBOX_HOME/configure-models.mjs"          2>/dev/null >> "$tmpfile" || true
     cat "$AGENTBOX_HOME/agent-init.sh"                 2>/dev/null >> "$tmpfile" || true
     cat "$AGENTBOX_HOME/excalidrawer-mcp-launcher.mjs" 2>/dev/null >> "$tmpfile" || true
